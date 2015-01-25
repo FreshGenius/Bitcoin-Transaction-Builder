@@ -1,0 +1,138 @@
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Bitcoin Transaction Builder</title>
+	<meta name="description" content="Bitcoin Transaction Builder - Powered by Chain.com API">
+    <meta name="keywords" content="bitcoin, transaction builder, build TX, sign TX send TX push TX, chain.com, API">
+    <meta name="author" content="Oli Brown">
+	
+	<link href="css/style.css" rel="stylesheet">
+</head>
+<body>
+	<div class="row">
+		<h1 class="center">Bitcoin Transaction Builder</h1>
+	</div>
+	<div class="row">
+		<div class="col c12">Send From:<br>
+		<input type="text" id="sendFrom" placeholder="Bitcoin Address" class="smooth"></div>
+	</div>
+	<div class="row">
+		<div class="col c12"><a id="checkBalance" class="btn btn-a btn-sm smooth">Check Balance</a></div>
+	</div>
+	<div class="row">
+		<div class="col c12">Balance:<br>
+		<input type="text" id="balance" placeholder="0.0" class="smooth" readonly></div>
+	</div>
+	<div class="row">
+		<div class="col c12">Amount to send:<br>
+		<input type="text" id="amount" placeholder="0.0" class="smooth"></div>
+	</div>
+	<div class="row">
+		<div class="col c12">Miners Fee:<br>
+		<input type="text" id="fee" value="10000" class="smooth"></div>
+	</div>
+	<div class="row">
+		<div class="col c12">Send To:<br>
+		<input type="text" id="sendTo" placeholder="Bitcoin Address" class="smooth"></div>
+	</div>
+	<div class="row">
+		<div class="col c12"><a id="build" class="btn btn-a btn-sm smooth">Build Transaction</a></div>
+	</div>
+	<div class="row">
+		<div class="col c12">Unsigned Transaction:<br>
+		<textarea rows="3" id="unsigned" placeholder="Unsigned Transaction" class="smooth"></textarea></div>
+	</div>
+	<div class="row">
+		<div class="col c12">Private Key:<br>
+		<input type="text" id="privateKey" placeholder="Private Key" class="smooth"></div>
+	</div>
+	<div class="row">
+		<div class="col c12"><a id="sign" class="btn btn-a btn-sm smooth">Sign Transaction</a></div>
+	</div>
+	<div class="row">
+		<div class="col c12">Signed Transaction:<br>
+		<textarea rows="3" id="signed" placeholder="Signed Transaction" class="smooth"></textarea></div>
+	</div>
+	<div class="row">
+		<div class="col c12"><a id="send" class="btn btn-a btn-sm smooth">Send Transaction</a></div>
+	</div>
+	<div class="row">
+		<div class="col c12 ">Transaction Hash:<br>
+		<textarea rows="3" id="sent" placeholder="Transaction Hash" class="smooth"></textarea></div>
+	</div>
+	<div class="row">
+		<div class="col c12 freshgenius"><a href="http://FreshGenius.com" target="blank">Fresh Genius</a></div>
+	</div>
+	
+	<script src="js/jquery.min.js"></script>
+	<script src="js/chain-jquery.min.js"></script>
+	<script>
+	  // Get API key from Chain.com
+	  var chainApiKeyId = "---YOUR-CHAIN.COM-API-KEY-ID---";
+
+	  // Initialise
+	  var chain = new Chain({blockChain: "bitcoin", apiKeyId: chainApiKeyId});
+
+	  // Get wallet balance
+	  $('#checkBalance').click(function (e) {
+		var addr = $('#sendFrom').val();
+		var url = 'https://api.chain.com/v2/bitcoin/addresses/' + addr;
+		$.ajax({
+		  url: url,
+		  crossDomain: true,
+		  data: {'api-key-id': chainApiKeyId},
+		  type: 'GET',
+		  dataType: 'json',
+		  success: function(data) {
+			$('#balance').val(data[0].total.balance);
+			$('#amount').val(data[0].total.balance-10000);
+		  }
+		});
+		e.preventDefault();
+		$('#checkBalance').blur();
+	  });
+
+	  // Build transaction
+	  $('#build').click(function (e) {
+		var sendFrom = $('#sendFrom').val();
+		var amount = $('#amount').val();
+		var fee = $('#fee').val();
+		var sendTo = $('#sendTo').val();
+		chain.buildTransaction({
+		  inputs: [{address: sendFrom}],
+		  outputs: [{address: sendTo, amount: amount}],
+			  miner_fee_rate: fee
+		  },
+		  function(err, resp) {
+		  $('#unsigned').text(JSON.stringify(resp));
+		  });
+		e.preventDefault();
+		$('#build').blur();
+	  });
+
+	  // Sign transaction
+	  $('#sign').click(function (e) {
+		var unsigned = $('#unsigned').val();
+		var template = JSON.parse(unsigned);
+		var privateKey = $('#privateKey').val();
+		var privateKeys = [privateKey];
+		var signed_template = chain.signTemplate(template, privateKeys);
+		$('#signed').text(JSON.stringify(signed_template));
+		e.preventDefault();
+		$('#sign').blur();
+	  });
+	  
+	  // Send transaction
+	  $('#send').click(function (e) {
+		var signed = $('#signed').val();
+		var template = JSON.parse(signed);
+		chain.sendTransaction(template, function(err, resp) {
+		  $('#sent').text(JSON.stringify(resp));
+		});
+		e.preventDefault();
+		$('#sign').blur();
+	  });
+	</script>
+</body>
+</html>
